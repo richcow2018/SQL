@@ -1,0 +1,78 @@
+SELECT 
+    order_id,
+    order_reference,
+    CONCAT('#IN', YEAR(order_date), '/', LPAD(invoice_number, 6, '0')) AS formatted_invoice_number,
+    product_id,
+    product_reference,
+    product_name,
+    product_attribute_id,
+    combination_details,
+    quantity_sold,
+    unit_price,
+    line_total,
+    order_date,
+    order_subtotal
+FROM (
+    SELECT 
+        od.id_order AS order_id,
+        o.reference AS order_reference,
+        o.invoice_number AS invoice_number,
+        od.product_id,
+        p.reference AS product_reference,
+        od.product_name,
+        od.product_attribute_id,
+        GROUP_CONCAT(DISTINCT CONCAT(agl.name, ': ', al.name) SEPARATOR ', ') AS combination_details,
+        od.product_quantity AS quantity_sold,
+        od.unit_price_tax_incl AS unit_price,
+        (od.product_quantity * od.unit_price_tax_incl) AS line_total,
+        o.date_add AS order_date,
+        NULL AS order_subtotal,
+        0 AS display_order  -- Item details first
+    FROM 
+        ps_order_detail od
+    JOIN 
+        ps_orders o ON od.id_order = o.id_order
+    LEFT JOIN 
+        ps_product p ON od.product_id = p.id_product
+    LEFT JOIN 
+        ps_product_attribute pa ON od.product_attribute_id = pa.id_product_attribute
+    LEFT JOIN 
+        ps_product_attribute_combination pac ON pa.id_product_attribute = pac.id_product_attribute
+    LEFT JOIN 
+        ps_attribute a ON pac.id_attribute = a.id_attribute
+    LEFT JOIN 
+        ps_attribute_lang al ON a.id_attribute = al.id_attribute AND al.id_lang = 1  -- assuming language id is 1
+    LEFT JOIN 
+        ps_attribute_group_lang agl ON a.id_attribute_group = agl.id_attribute_group AND agl.id_lang = 1  -- assuming language id is 1
+    GROUP BY 
+        od.id_order, od.product_id, od.product_attribute_id, o.date_add, o.reference, o.invoice_number, od.product_name
+
+    UNION ALL
+
+    SELECT 
+        od.id_order AS order_id,
+        o.reference AS order_reference,
+        o.invoice_number AS invoice_number,
+        NULL AS product_id,
+        NULL AS product_reference,
+        NULL AS product_name,
+        NULL AS product_attribute_id,
+        NULL AS combination_details,
+        NULL AS quantity_sold,
+        NULL AS unit_price,
+        NULL AS line_total,
+        NULL AS order_date,
+        SUM(od.product_quantity * od.unit_price_tax_incl) AS order_subtotal,
+        1 AS display_order  -- Subtotal last
+    FROM 
+        ps_order_detail od
+    JOIN 
+        ps_orders o ON od.id_order = o.id_order
+    GROUP BY 
+        od.id_order, o.reference, o.invoice_number
+) AS combined
+ORDER BY 
+    order_id, 
+    display_order,  -- Ensure display order puts subtotal last
+    order_date DESC, 
+    product_id DESC;
