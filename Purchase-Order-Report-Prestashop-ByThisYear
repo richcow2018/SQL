@@ -1,0 +1,24 @@
+SELECT 
+    po_id AS "PO ID",
+    reference AS 'PO Reference', 
+    ps_bms_procurement_purchase_order.supplier_po_reference AS 'Supplier DN', 
+    ps_bms_procurement_purchase_order.supplier_invoice_reference AS 'Supplier Invoice Reference',
+    date_add AS 'Creation Date', 
+    date_upd AS 'Receipt Date', 
+    ps_bms_procurement_purchase_order_status.name AS 'Status', 
+    sku AS 'Product SKU', 
+    ps_bms_procurement_purchase_order_product.name AS 'Product Name', 
+    ROUND(price, 2) AS 'Unit Price', 
+    qty_ordered AS 'Quantity', 
+    ROUND(price * qty_ordered, 2) AS 'Subtotal for Purchased Products',
+    ROUND(total, 2) AS 'Total Procurement Order'
+FROM 
+    ps_bms_procurement_purchase_order_product
+LEFT JOIN 
+    ps_bms_procurement_purchase_order ON ps_bms_procurement_purchase_order_product.po_id = ps_bms_procurement_purchase_order.id_bms_procurement_purchase_order
+LEFT JOIN 
+    ps_bms_procurement_purchase_order_status ON ps_bms_procurement_purchase_order.status_id = ps_bms_procurement_purchase_order_status.id_bms_procurement_purchase_order_status
+WHERE 
+    Year(date_add) = Year(CURDATE())
+ORDER BY 
+    po_id DESC;
