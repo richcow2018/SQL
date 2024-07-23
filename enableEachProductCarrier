@@ -1,0 +1,12 @@
+INSERT IGNORE INTO ps_product_carrier (id_product, id_carrier_reference, id_shop)
+SELECT p.id_product, cr.id_carrier_reference, 1 as id_shop
+FROM ps_product p
+CROSS JOIN (SELECT 1 as id_carrier_reference UNION ALL
+            SELECT 2 UNION ALL
+            SELECT 37 UNION ALL
+            SELECT 38 UNION ALL
+            SELECT 40 UNION ALL
+            SELECT 41) cr
+LEFT JOIN ps_product_carrier pc
+ON p.id_product = pc.id_product AND cr.id_carrier_reference = pc.id_carrier_reference AND pc.id_shop = 1
+WHERE pc.id_product IS NULL;
